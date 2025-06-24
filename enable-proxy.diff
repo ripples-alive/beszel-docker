@@ -1,0 +1,57 @@
+diff --git a/beszel/internal/hub/systems/systems.go b/beszel/internal/hub/systems/systems.go
+index e8af7bf..4e37430 100644
+--- a/beszel/internal/hub/systems/systems.go
++++ b/beszel/internal/hub/systems/systems.go
+@@ -5,6 +5,7 @@ import (
+ 	"context"
+ 	"fmt"
+ 	"net"
++	"os"
+ 	"strings"
+ 	"time"
+ 
+@@ -12,6 +13,7 @@ import (
+ 	"github.com/pocketbase/pocketbase/core"
+ 	"github.com/pocketbase/pocketbase/tools/store"
+ 	"golang.org/x/crypto/ssh"
++	"golang.org/x/net/proxy"
+ )
+ 
+ const (
+@@ -388,6 +390,36 @@ func (s *System) createSSHClient() error {
+ 		host = net.JoinHostPort(host, s.Port)
+ 	}
+ 	var err error
++
++	// Read proxy configuration from environment variables
++	proxyHost := os.Getenv("PROXY_HOST")
++	proxyPort := os.Getenv("PROXY_PORT")
++
++	if proxyHost != "" && proxyPort != "" {
++		// Use SOCKS5 proxy if configured
++		proxyAddr := net.JoinHostPort(proxyHost, proxyPort)
++		dialer, err := proxy.SOCKS5("tcp", proxyAddr, nil, proxy.Direct)
++		if err != nil {
++			return fmt.Errorf("failed to create SOCKS5 proxy dialer: %w", err)
++		}
++
++		// Connect through proxy
++		conn, err := dialer.Dial(network, host)
++		if err != nil {
++			return fmt.Errorf("failed to connect through proxy: %w", err)
++		}
++
++		// Use the SSH config from the manager
++		sshConn, chans, reqs, err := ssh.NewClientConn(conn, host, s.manager.sshConfig)
++		if err != nil {
++			conn.Close()
++			return fmt.Errorf("failed to create SSH client connection: %w", err)
++		}
++
++		s.client = ssh.NewClient(sshConn, chans, reqs)
++		return nil
++	}
++
+ 	s.client, err = ssh.Dial(network, host, s.manager.sshConfig)
+ 	if err != nil {
+ 		return err
