@@ -2,7 +2,7 @@
 
 NAME=beszel
 BUILDER=${NAME}-builder
-VERSION=0.11.1
+VERSION=0.12.1
 
 cd beszel/beszel
 git checkout "v${VERSION}"
