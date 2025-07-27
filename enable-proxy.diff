@@ -1,27 +1,30 @@
-diff --git a/beszel/internal/hub/systems/systems.go b/beszel/internal/hub/systems/systems.go
-index e8af7bf..4e37430 100644
---- a/beszel/internal/hub/systems/systems.go
-+++ b/beszel/internal/hub/systems/systems.go
-@@ -5,6 +5,7 @@ import (
- 	"context"
+diff --git a/beszel/internal/hub/systems/system.go b/beszel/internal/hub/systems/system.go
+index 0ee415c..365aa97 100644
+--- a/beszel/internal/hub/systems/system.go
++++ b/beszel/internal/hub/systems/system.go
+@@ -10,6 +10,7 @@ import (
  	"fmt"
+ 	"math/rand"
  	"net"
 +	"os"
  	"strings"
  	"time"
  
-@@ -12,6 +13,7 @@ import (
+@@ -17,6 +18,7 @@ import (
+ 	"github.com/fxamacker/cbor/v2"
  	"github.com/pocketbase/pocketbase/core"
- 	"github.com/pocketbase/pocketbase/tools/store"
  	"golang.org/x/crypto/ssh"
 +	"golang.org/x/net/proxy"
  )
  
- const (
-@@ -388,6 +390,36 @@ func (s *System) createSSHClient() error {
+ type System struct {
+@@ -313,10 +315,40 @@ func (s *System) createSSHClient() error {
  		host = net.JoinHostPort(host, s.Port)
  	}
  	var err error
+-	s.client, err = ssh.Dial(network, host, s.manager.sshConfig)
+-	if err != nil {
+-		return err
 +
 +	// Read proxy configuration from environment variables
 +	proxyHost := os.Getenv("PROXY_HOST")
@@ -49,9 +52,13 @@ index e8af7bf..4e37430 100644
 +		}
 +
 +		s.client = ssh.NewClient(sshConn, chans, reqs)
-+		return nil
-+	}
++	} else {
++		s.client, err = ssh.Dial(network, host, s.manager.sshConfig)
++		if err != nil {
++			return err
++		}
+ 	}
 +
- 	s.client, err = ssh.Dial(network, host, s.manager.sshConfig)
- 	if err != nil {
- 		return err
+ 	s.agentVersion, _ = extractAgentVersion(string(s.client.Conn.ServerVersion()))
+ 	return nil
+ }

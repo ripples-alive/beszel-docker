@@ -4,8 +4,18 @@ NAME=beszel
 BUILDER=${NAME}-builder
 VERSION=0.12.1
 
-cd beszel/beszel
+if [ ! -d "beszel" ]; then
+    git clone https://github.com/henrygd/beszel
+fi
+
+cd beszel
+git fetch
+git reset --hard
 git checkout "v${VERSION}"
+git apply -3 ../enable-proxy.diff
+
+cd beszel
+make build-web-ui
 
 docker buildx create --use --name $BUILDER
 docker buildx inspect --bootstrap
