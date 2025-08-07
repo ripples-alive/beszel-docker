@@ -2,7 +2,7 @@
 
 NAME=beszel
 BUILDER=${NAME}-builder
-VERSION=0.12.1
+VERSION=0.12.3
 
 if [ ! -d "beszel" ]; then
     git clone https://github.com/henrygd/beszel
