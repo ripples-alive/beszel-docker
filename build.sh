@@ -27,7 +27,7 @@ docker buildx build \
     --tag ripples/$NAME:$VERSION \
     --build-arg VERSION=$VERSION \
     --builder $BUILDER . \
-    -f dockerfile_Hub
+    -f dockerfile_hub
 
 docker buildx stop $BUILDER
 docker buildx rm $BUILDER
