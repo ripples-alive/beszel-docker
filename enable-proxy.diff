@@ -1,7 +1,7 @@
-diff --git a/beszel/internal/hub/systems/system.go b/beszel/internal/hub/systems/system.go
+diff --git a/internal/hub/systems/system.go b/internal/hub/systems/system.go
 index 0ee415c..365aa97 100644
---- a/beszel/internal/hub/systems/system.go
-+++ b/beszel/internal/hub/systems/system.go
+--- a/internal/hub/systems/system.go
++++ b/internal/hub/systems/system.go
 @@ -10,6 +10,7 @@ import (
  	"fmt"
  	"math/rand"

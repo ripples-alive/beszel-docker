@@ -2,7 +2,7 @@
 
 NAME=beszel
 BUILDER=${NAME}-builder
-VERSION=0.12.7
+VERSION=0.12.10
 
 if [ ! -d "beszel" ]; then
     git clone https://github.com/henrygd/beszel
@@ -14,7 +14,6 @@ git reset --hard
 git checkout "v${VERSION}"
 git apply -3 ../enable-proxy.diff
 
-cd beszel
 make build-web-ui
 
 docker buildx create --use --name $BUILDER
@@ -27,7 +26,7 @@ docker buildx build \
     --tag ripples/$NAME:$VERSION \
     --build-arg VERSION=$VERSION \
     --builder $BUILDER . \
-    -f dockerfile_hub
+    -f internal/dockerfile_hub
 
 docker buildx stop $BUILDER
 docker buildx rm $BUILDER
