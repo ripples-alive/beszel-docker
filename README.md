@@ -13,8 +13,8 @@ The patch enables SOCKS5 proxy support for Hub SSH connections when
 GitHub Actions publishes the image to:
 
 ```text
-ghcr.io/ripples-alive/beszel-docker:0.18.7
-ghcr.io/ripples-alive/beszel-docker:latest
+ghcr.io/ripples-alive/beszel:0.18.7
+ghcr.io/ripples-alive/beszel:latest
 ```
 
 Supported platforms:
@@ -31,7 +31,7 @@ docker run -d \
   --name beszel \
   -p 8090:8090 \
   -v beszel_data:/beszel_data \
-  ghcr.io/ripples-alive/beszel-docker:0.18.7
+  ghcr.io/ripples-alive/beszel:0.18.7
 ```
 
 To route Hub SSH connections through a SOCKS5 proxy:
@@ -43,7 +43,7 @@ docker run -d \
   -v beszel_data:/beszel_data \
   -e PROXY_HOST=proxy.example.com \
   -e PROXY_PORT=1080 \
-  ghcr.io/ripples-alive/beszel-docker:0.18.7
+  ghcr.io/ripples-alive/beszel:0.18.7
 ```
 
 ## GitHub Actions

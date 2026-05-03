@@ -60,7 +60,7 @@ jobs:
           fi
           version="${version#v}"
 
-          image="ghcr.io/${GITHUB_REPOSITORY,,}"
+          image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/beszel"
           push_image="true"
           if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
             push_image="false"
