@@ -1,0 +1,142 @@
+name: Build and publish Docker image
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Beszel version without leading v. Leave blank to use the v* ref or the default."
+        required: false
+        type: string
+      push_image:
+        description: "Push the image to GitHub Container Registry."
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: docker-image-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DEFAULT_BESZEL_VERSION: "0.18.7"
+  PLATFORMS: linux/amd64,linux/arm64
+  UPSTREAM_REPOSITORY: henrygd/beszel
+
+jobs:
+  docker:
+    name: Build Docker image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Resolve build settings
+        id: build
+        shell: bash
+        env:
+          INPUT_PUSH_IMAGE: ${{ github.event.inputs.push_image }}
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+        run: |
+          set -euo pipefail
+
+          version="${INPUT_VERSION}"
+          if [ -z "$version" ]; then
+            if [ "${GITHUB_REF_TYPE}" = "tag" ] && [[ "${GITHUB_REF_NAME}" == v* ]]; then
+              version="${GITHUB_REF_NAME#v}"
+            else
+              version="${DEFAULT_BESZEL_VERSION}"
+            fi
+          fi
+          version="${version#v}"
+
+          image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/beszel"
+          push_image="true"
+          if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+            push_image="false"
+          elif [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ] && [ "${INPUT_PUSH_IMAGE}" = "false" ]; then
+            push_image="false"
+          fi
+
+          {
+            echo "image=${image}"
+            echo "push_image=${push_image}"
+            echo "version=${version}"
+            echo "tags<<EOF"
+            echo "${image}:${version}"
+            echo "${image}:latest"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Clone and patch Beszel
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git clone \
+            --depth 1 \
+            --branch "v${{ steps.build.outputs.version }}" \
+            "https://github.com/${UPSTREAM_REPOSITORY}.git" \
+            beszel
+
+          git -C beszel apply --check ../enable-proxy.diff
+          git -C beszel apply ../enable-proxy.diff
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: beszel/internal/site/package-lock.json
+
+      - name: Build web UI
+        working-directory: beszel
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          npm ci --prefix ./internal/site
+          npm run --prefix ./internal/site build
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        if: steps.build.outputs.push_image == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and optionally push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./beszel
+          file: ./beszel/internal/dockerfile_hub
+          platforms: ${{ env.PLATFORMS }}
+          pull: true
+          push: ${{ steps.build.outputs.push_image == 'true' }}
+          tags: ${{ steps.build.outputs.tags }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.version=${{ steps.build.outputs.version }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.description=Beszel with SOCKS5 proxy support for hub SSH connections
+          build-args: |
+            VERSION=${{ steps.build.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
