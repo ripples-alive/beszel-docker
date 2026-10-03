@@ -59,9 +59,15 @@ Pull requests build the patched multi-arch image for validation but do not push
 to the registry. Pushes to `main`, `v*` tags, and manual release runs push both
 the version tag and `latest` to GitHub Container Registry.
 
-The default Beszel version is configured in the workflow as
-`DEFAULT_BESZEL_VERSION`. Manual runs can override the version input; tag builds
-use the tag name without the leading `v` when no manual version is supplied.
+The default Beszel version is stored in `beszel-version.txt`. Manual runs can
+override the version input; tag builds use the tag name without the leading
+`v` when no manual version is supplied. Automated version commits change only
+the version file and README, so the built-in `GITHUB_TOKEN` can push them.
+
+The `Update Beszel stable release` workflow checks the upstream stable release
+every day and validates a patched candidate image before opening an exact
+version PR. If the upstream tree makes `enable-proxy.diff` fail to apply, the
+candidate build fails and leaves the version unchanged for investigation.
 
 ## Local Build
 

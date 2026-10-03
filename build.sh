@@ -1,18 +1,19 @@
 #!/bin/sh
 
 NAME=beszel
-BUILDER=${NAME}-builder
-VERSION=0.18.7
+BUILDER="${NAME}-builder"
+SCRIPT_DIR=$(CDPATH=; cd -- "$(dirname -- "$0")" && pwd)
+VERSION=$(tr -d '\r\n' <"$SCRIPT_DIR/beszel-version.txt")
 
-if [ ! -d "beszel" ]; then
-    git clone https://github.com/henrygd/beszel
+if [ ! -d "$SCRIPT_DIR/beszel" ]; then
+    git clone https://github.com/henrygd/beszel "$SCRIPT_DIR/beszel"
 fi
 
-cd beszel
+cd "$SCRIPT_DIR/beszel" || exit
 git fetch
 git reset --hard
 git checkout "v${VERSION}"
-git apply ../enable-proxy.diff
+git apply "$SCRIPT_DIR/enable-proxy.diff"
 
 make build-web-ui
 
