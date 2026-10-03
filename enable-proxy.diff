@@ -1,60 +1,42 @@
-diff --git a/internal/hub/systems/system.go b/internal/hub/systems/system.go
-index 28f357a3..8a0da399 100644
---- a/internal/hub/systems/system.go
-+++ b/internal/hub/systems/system.go
-@@ -8,6 +8,7 @@ import (
- 	"hash/fnv"
- 	"math/rand"
+diff --git a/internal/hub/transport/ssh.go b/internal/hub/transport/ssh.go
+index 8d49646..79e3a2d 100644
+--- a/internal/hub/transport/ssh.go
++++ b/internal/hub/transport/ssh.go
+@@ -6,6 +6,7 @@ import (
+ 	"fmt"
+ 	"io"
  	"net"
 +	"os"
- 	"slices"
  	"strings"
- 	"sync/atomic"
-@@ -30,6 +31,7 @@ import (
- 	"github.com/pocketbase/dbx"
- 	"github.com/pocketbase/pocketbase/core"
+ 	"sync"
+ 	"time"
+@@ -14,6 +15,7 @@ import (
+ 	"github.com/fxamacker/cbor/v2"
+ 	"github.com/henrygd/beszel/internal/common"
  	"golang.org/x/crypto/ssh"
 +	"golang.org/x/net/proxy"
  )
  
- type System struct {
-@@ -649,9 +651,36 @@ func (s *System) createSSHClient() error {
- 		host = net.JoinHostPort(host, s.Port)
+ // sshKeepAliveInterval is the TCP keep-alive idle interval for SSH connections
+@@ -200,7 +202,20 @@ func (t *SSHTransport) Connect(ctx context.Context) (*ssh.Client, error) {
  	}
- 	var err error
--	s.client, err = ssh.Dial(network, host, s.manager.sshConfig)
--	if err != nil {
--		return err
-+	// Read proxy configuration from environment variables.
+ 
+ 	dialer := net.Dialer{Timeout: t.config.Timeout, KeepAlive: sshKeepAliveInterval}
+-	conn, err := dialer.DialContext(ctx, network, host)
++	var conn net.Conn
++	var err error
 +	proxyHost := os.Getenv("PROXY_HOST")
 +	proxyPort := os.Getenv("PROXY_PORT")
-+
-+	if proxyHost != "" && proxyPort != "" {
-+		// Use SOCKS5 proxy if configured.
++	if network == "tcp" && proxyHost != "" && proxyPort != "" {
 +		proxyAddr := net.JoinHostPort(proxyHost, proxyPort)
-+		dialer, err := proxy.SOCKS5("tcp", proxyAddr, nil, proxy.Direct)
-+		if err != nil {
-+			return fmt.Errorf("failed to create SOCKS5 proxy dialer: %w", err)
++		socksDialer, dialerErr := proxy.SOCKS5("tcp", proxyAddr, nil, &dialer)
++		if dialerErr != nil {
++			return nil, fmt.Errorf("failed to create SOCKS5 proxy dialer: %w", dialerErr)
 +		}
-+
-+		// Connect through proxy before promoting the connection into an SSH client.
-+		conn, err := dialer.Dial(network, host)
-+		if err != nil {
-+			return fmt.Errorf("failed to connect through proxy: %w", err)
-+		}
-+
-+		sshConn, chans, reqs, err := ssh.NewClientConn(conn, host, s.manager.sshConfig)
-+		if err != nil {
-+			conn.Close()
-+			return fmt.Errorf("failed to create SSH client connection: %w", err)
-+		}
-+
-+		s.client = ssh.NewClient(sshConn, chans, reqs)
++		conn, err = socksDialer.Dial(network, host)
 +	} else {
-+		s.client, err = ssh.Dial(network, host, s.manager.sshConfig)
-+		if err != nil {
-+			return err
-+		}
++		conn, err = dialer.DialContext(ctx, network, host)
++	}
+ 	if err != nil {
+ 		return nil, err
  	}
- 	s.agentVersion, _ = extractAgentVersion(string(s.client.Conn.ServerVersion()))
- 	s.manager.resetFailedSmartFetchState(s.Id)

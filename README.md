@@ -1,7 +1,7 @@
 # Beszel Docker
 
 This repository builds a patched Beszel Hub image. The build clones
-[`henrygd/beszel`](https://github.com/henrygd/beszel) at `v0.18.7`, applies
+[`henrygd/beszel`](https://github.com/henrygd/beszel) at `v0.21.0`, applies
 [`enable-proxy.diff`](enable-proxy.diff), builds the web UI, and then builds a
 multi-arch Docker image from Beszel's `internal/dockerfile_hub`.
 
@@ -13,7 +13,7 @@ The patch enables SOCKS5 proxy support for Hub SSH connections when
 GitHub Actions publishes the image to:
 
 ```text
-ghcr.io/ripples-alive/beszel:0.18.7
+ghcr.io/ripples-alive/beszel:0.21.0
 ghcr.io/ripples-alive/beszel:latest
 ```
 
@@ -31,7 +31,7 @@ docker run -d \
   --name beszel \
   -p 8090:8090 \
   -v beszel_data:/beszel_data \
-  ghcr.io/ripples-alive/beszel:0.18.7
+  ghcr.io/ripples-alive/beszel:0.21.0
 ```
 
 To route Hub SSH connections through a SOCKS5 proxy:
@@ -43,7 +43,7 @@ docker run -d \
   -v beszel_data:/beszel_data \
   -e PROXY_HOST=proxy.example.com \
   -e PROXY_PORT=1080 \
-  ghcr.io/ripples-alive/beszel:0.18.7
+  ghcr.io/ripples-alive/beszel:0.21.0
 ```
 
 ## GitHub Actions
